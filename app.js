@@ -45,17 +45,19 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function(origin, callback) {
-    // allow requests with no origin like Postman or server-to-server requests
-    if (!origin) return callback(null, true);
+    console.log("Incoming request origin:", origin); // debug
+
+    if (!origin) return callback(null, true); // allow Postman, server requests
 
     if (allowedOrigins.includes(origin)) {
-      callback(null, true);
+      return callback(null, true);
     } else {
-      callback(new Error(`CORS policy does not allow access from ${origin}`), false);
+      console.warn(`Blocked by CORS: ${origin}`);
+      return callback(null, false); // fail silently instead of throwing error
     }
   },
-  methods: ['GET', 'POST', 'DELETE', 'PUT'],
-  credentials: true
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
 }));
 
 app.use("/api/v1/message", messageRouter);
@@ -64,7 +66,6 @@ app.use("/api/v1/timeline", timelineRouter);
 app.use("/api/v1/softwareapplication", applicationRouter);
 app.use("/api/v1/skill", skillRouter);
 app.use("/api/v1/project", projectRouter);
-
 // ✅ Global error handler LAST
 // app.use(errorHandler)
 app.use(errorMiddleware);
