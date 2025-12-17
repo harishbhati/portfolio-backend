@@ -38,15 +38,25 @@ app.use((req, res, next) => {
 });
 
 // middleware to resolve the cross origin url issue
+const allowedOrigins = [
+  process.env.PORTFOLIO_URL,
+  process.env.DASHBOARD_URL 
+];
+
 app.use(cors({
-        origin:[
-            process.env.PORTFOLIO_URL,
-            process.env.DASHBOARD_URL
-        ],
-        methods: ['GET', 'POST', 'DELETE', 'PUT'],
-        credentials: true
-    })
-)
+  origin: function(origin, callback) {
+    // allow requests with no origin like Postman or server-to-server requests
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`CORS policy does not allow access from ${origin}`), false);
+    }
+  },
+  methods: ['GET', 'POST', 'DELETE', 'PUT'],
+  credentials: true
+}));
 
 app.use("/api/v1/message", messageRouter);
 app.use("/api/v1/user", userRouter);
