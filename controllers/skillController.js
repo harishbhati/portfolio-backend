@@ -2,6 +2,10 @@ import catchAsyncError from "../middleware/catchAsyncError.js";
 import {ErrorHandler} from "../middleware/error.js";
 import {Skill} from "../models/skillSchema.js";
 import {v2 as cloudinary} from "cloudinary";
+import multer from "multer";
+
+const storage = multer.memoryStorage(); // store file in memory
+export const upload = multer({ storage });
 
 
 export const addSkill = catchAsyncError(async(req, res, next) => {
@@ -67,25 +71,27 @@ export const updateSkill = catchAsyncError(async (req, res, next) => {
     const { id } = req.params;
 
     let skill = await Skill.findById(id);
-    if (!skill) {
-        return next(new ErrorHandler("Skill not found!", 400));
-    }
+    if (!skill) return next(new ErrorHandler("Skill not found!", 400));
 
     if (req.body.title) skill.title = req.body.title;
     if (req.body.proficiency) skill.proficiency = req.body.proficiency;
 
-    if (req.body.svg) {
-        // Delete old image from Cloudinary
-        await cloudinary.uploader.destroy(skill.svg.public_id);
+    if (req.files && req.files.skillIcon) { // check for file
+        const skillIcon = req.files.skillIcon;
 
-        // Upload new image
-        const result = await cloudinary.uploader.upload(req.body.svg, {
-            folder: "portfolio/skills",
+        // Delete old image if exists
+        if (skill.skillIcon?.public_id) {
+            await cloudinary.uploader.destroy(skill.skillIcon.public_id);
+        }
+
+        // Upload new image to Cloudinary
+        const cloudinaryResponse = await cloudinary.uploader.upload(skillIcon.tempFilePath, {
+            folder: "PORTFOLIO_SKILL"
         });
 
-        skill.svg = {
-            public_id: result.public_id,
-            url: result.secure_url,
+        skill.skillIcon = {
+            public_id: cloudinaryResponse.public_id,
+            url: cloudinaryResponse.secure_url
         };
     }
 
@@ -94,7 +100,7 @@ export const updateSkill = catchAsyncError(async (req, res, next) => {
     res.status(200).json({
         success: true,
         message: "Skill updated successfully!",
-        skill,
+        skill
     });
 });
 
